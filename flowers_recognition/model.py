@@ -41,7 +41,6 @@ class SimpleModel(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 5)
 
-
     def forward(self, x):
         # input: 128 x 3 x 224 x 224
         # out = self.conv1(x)
@@ -68,6 +67,37 @@ class SimpleModel(nn.Module):
         out = self.fc3(out)
         # print('fc3 shape', out.shape)
         return out
+
+    def train_loss(self, batch):
+        img, label = batch
+        out = self.forward(img)
+        loss = F.cross_entropy(out, label)
+        return loss
+
+    def val_loss(self, batch):
+        img, label = batch
+        out = self.forward(img)
+        loss = F.cross_entropy(out, label)
+        acc = accuracy(out, label)
+        return loss, acc
+
+
+class ResNetTransfer(nn.Module):
+    def __init__(self, num_classes=5):
+        super().__init__()
+        self.model = models.resnet50(weights='IMAGENET1K_V1')
+        # Freeze all parameters in the model to avoid weight update during training
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # Replace the final fully connected layer to match target problem for 5 classes
+        # only the parameters of model.fc have requires_grad=True
+        num_fc_in = self.model.fc.in_features
+        self.model.fc = torch.nn.Linear(num_fc_in, num_classes)
+
+
+    def forward(self, x):
+        return self.model(x)
 
     def train_loss(self, batch):
         img, label = batch

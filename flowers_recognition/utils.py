@@ -47,3 +47,27 @@ def show_batch(image_dataloader):
         ax.imshow(make_grid(images, nrow = 16).permute(1, 2, 0))
         plt.show()
         break
+
+
+def record_results(args, history, filename='training_log.txt', duration=0):
+    # Create the file path
+    log_dir = os.path.join(os.getcwd(), 'log')
+    log_path = os.path.join(log_dir, filename)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        print('Created new log directory: {}'.format(log_dir))
+
+    with open(log_path, 'a') as f:
+        f.write("--- Training Run ---\n")
+        f.write(f"Timestamp: {time.ctime()}\n")
+
+        # Write arguments
+        f.write("Arguments:\n")
+        for arg, value in vars(args).items():
+            f.write(f"  {arg}: {value}\n")
+
+        # Write final results
+        f.write("\n\nEvaluation Results:\n")
+        f.write('\n'.join(history))
+        f.write("\n\nTraining duration: {}\n".format(duration))
+        f.write("\n")

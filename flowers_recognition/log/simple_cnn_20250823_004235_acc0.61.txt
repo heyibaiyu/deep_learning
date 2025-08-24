@@ -1,0 +1,63 @@
+--- Training Run ---
+Timestamp: Sat Aug 23 00:42:35 2025
+Arguments:
+  num_epochs: 50
+  lr: 0.0001
+  batch_size: 128
+  model_type: simple_cnn
+
+
+Evaluation Results:
+Epoch [1/50], Loss: 1.1446, Accuracy: 0.5417
+Epoch [2/50], Loss: 1.0421, Accuracy: 0.6013
+Epoch [3/50], Loss: 0.9849, Accuracy: 0.6083
+Epoch [4/50], Loss: 0.9581, Accuracy: 0.6063
+Epoch [5/50], Loss: 0.9670, Accuracy: 0.6033
+Epoch [6/50], Loss: 0.9724, Accuracy: 0.6331
+Epoch [7/50], Loss: 0.9212, Accuracy: 0.6565
+Epoch [8/50], Loss: 1.0217, Accuracy: 0.6297
+Epoch [9/50], Loss: 1.0250, Accuracy: 0.6205
+Epoch [10/50], Loss: 1.3643, Accuracy: 0.5753
+Epoch [11/50], Loss: 1.1812, Accuracy: 0.6342
+Epoch [12/50], Loss: 1.2691, Accuracy: 0.6166
+Epoch [13/50], Loss: 1.3368, Accuracy: 0.6093
+Epoch [14/50], Loss: 1.3872, Accuracy: 0.6269
+Epoch [15/50], Loss: 1.4408, Accuracy: 0.6138
+Epoch [16/50], Loss: 1.5243, Accuracy: 0.6264
+Epoch [17/50], Loss: 1.6175, Accuracy: 0.6021
+Epoch [18/50], Loss: 1.5592, Accuracy: 0.6196
+Epoch [19/50], Loss: 1.7031, Accuracy: 0.6278
+Epoch [20/50], Loss: 1.6816, Accuracy: 0.6046
+Epoch [21/50], Loss: 1.6675, Accuracy: 0.6166
+Epoch [22/50], Loss: 1.7055, Accuracy: 0.6122
+Epoch [23/50], Loss: 1.9421, Accuracy: 0.5903
+Epoch [24/50], Loss: 1.7936, Accuracy: 0.6116
+Epoch [25/50], Loss: 1.7758, Accuracy: 0.5923
+Epoch [26/50], Loss: 1.7814, Accuracy: 0.6225
+Epoch [27/50], Loss: 2.0236, Accuracy: 0.6186
+Epoch [28/50], Loss: 1.8380, Accuracy: 0.6390
+Epoch [29/50], Loss: 1.9387, Accuracy: 0.6384
+Epoch [30/50], Loss: 1.8720, Accuracy: 0.6099
+Epoch [31/50], Loss: 1.9641, Accuracy: 0.6429
+Epoch [32/50], Loss: 1.8502, Accuracy: 0.6211
+Epoch [33/50], Loss: 1.7802, Accuracy: 0.5714
+Epoch [34/50], Loss: 1.7678, Accuracy: 0.6010
+Epoch [35/50], Loss: 1.7920, Accuracy: 0.6093
+Epoch [36/50], Loss: 1.8063, Accuracy: 0.6161
+Epoch [37/50], Loss: 2.0918, Accuracy: 0.5923
+Epoch [38/50], Loss: 1.9443, Accuracy: 0.5976
+Epoch [39/50], Loss: 1.9439, Accuracy: 0.6248
+Epoch [40/50], Loss: 1.9465, Accuracy: 0.6043
+Epoch [41/50], Loss: 1.9845, Accuracy: 0.6233
+Epoch [42/50], Loss: 2.0287, Accuracy: 0.6054
+Epoch [43/50], Loss: 1.9853, Accuracy: 0.6122
+Epoch [44/50], Loss: 2.1703, Accuracy: 0.6063
+Epoch [45/50], Loss: 2.0946, Accuracy: 0.6074
+Epoch [46/50], Loss: 2.1262, Accuracy: 0.5957
+Epoch [47/50], Loss: 2.0807, Accuracy: 0.6107
+Epoch [48/50], Loss: 2.1156, Accuracy: 0.6040
+Epoch [49/50], Loss: 2.1282, Accuracy: 0.6326
+Epoch [50/50], Loss: 2.1430, Accuracy: 0.6141
+
+Training duration: 2:16:25.182183
+
