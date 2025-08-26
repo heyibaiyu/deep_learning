@@ -25,6 +25,7 @@ def fit(epochs: int,
     print('--------- start training ---------')
     history = []
     optimizer = opt_fun(model.parameters(), lr=learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=4)
     train_losses = []
     start_time = datetime.now()
     print(start_time)
@@ -40,7 +41,10 @@ def fit(epochs: int,
 
         # validation stage
         result = batch_evaluate(model, val_loader)
-        result_str = 'Epoch [{}/{}], Loss: {:.4f}, Accuracy: {:.4f}'.format(epoch + 1, epochs, result['val_loss'], result['val_acc'])
+        scheduler.step(result.get('val_acc', None))
+        current_lr = optimizer.param_groups[0]['lr']
+
+        result_str = 'Epoch [{}/{}], Loss: {:.4f}, Accuracy: {:.4f}, LR: {: .10f}'.format(epoch + 1, epochs, result['val_loss'], result['val_acc'], current_lr)
         print(result_str)
         history.append(result_str)
         print(datetime.now())
@@ -102,7 +106,7 @@ def train(args):
 if __name__ ==  '__main__':
     parser = argparse.ArgumentParser(description='Training parameters')
 
-    parser.add_argument('--num_epochs', type=int, default=20,
+    parser.add_argument('--num_epochs', type=int, default=100,
                         help='Number of epochs to train for.')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate for the optimizer.')
