@@ -42,6 +42,8 @@ def create_dataloader_v1(txt, context_size, stride, batch_size):
 
 dl = create_dataloader_v1(raw, 4,  4, 5)
 print('dataloader size:', len(dl))
-iter = iter(dl)
-print(next(iter))
-print(next(iter))
+data_iter = iter(dl)
+print(next(data_iter))
+print(next(data_iter))
+
+print('vocab size:', tokenizer.n_vocab)
