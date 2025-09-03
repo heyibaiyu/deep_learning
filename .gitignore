@@ -1,0 +1,10 @@
+/build-llm-from-scratch/.idea
+/flowers_recognition/.idea
+/flowers_recognition/__pycache__
+build-llm-from-scratch/.DS_Store
+build-llm-from-scratch/the-verdict.txt
+flowers_recognition/.DS_Store
+flowers_recognition/log/.DS_Store
+build-llm-from-scratch/__pycache__/utils.cpython-310.pyc
+build-llm-from-scratch/__pycache__/ch2_text_sampling_with_sliding_window.cpython-310.pyc
+.DS_Store
