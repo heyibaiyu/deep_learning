@@ -8,3 +8,4 @@ flowers_recognition/log/.DS_Store
 build-llm-from-scratch/__pycache__/utils.cpython-310.pyc
 build-llm-from-scratch/__pycache__/ch2_text_sampling_with_sliding_window.cpython-310.pyc
 .DS_Store
+build-llm-from-scratch/__pycache__/ch3_attention.cpython-310.pyc
