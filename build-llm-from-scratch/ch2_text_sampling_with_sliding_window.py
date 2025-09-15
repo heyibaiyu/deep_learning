@@ -34,10 +34,10 @@ class GPTDatasetV1(Dataset):
         return self.input_ids[idx], self.target_ids[idx]
 
 
-def create_dataloader_v1(txt, context_size, stride, batch_size):
+def create_dataloader_v1(txt, context_size, stride, batch_size, shuffle=False, drop_last=False):
     tokenizer_v1 = tiktoken.encoding_for_model('gpt-4')
     dataset = GPTDatasetV1(txt, tokenizer_v1, context_size, stride)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=0, drop_last=drop_last)
     return dataloader
 
 dl = create_dataloader_v1(raw, 4,  4, 5)

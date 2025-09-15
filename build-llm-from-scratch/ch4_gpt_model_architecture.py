@@ -191,12 +191,13 @@ def print_gradients(model, x):
             # print the mean absolute gradient of the weights
             print(f"{name} has gradient mean of {param.grad.abs().mean().item()}")
 
-layer_sizes = [3, 3, 3, 3, 3, 1]
-sample_input = torch.tensor([[1., 0., -1.]])
-print('input shape:', sample_input.shape)
-torch.manual_seed(123)
-model1 = ExampleDeepNeuralNetwork(layer_sizes, use_shortcut=True)
-print_gradients(model1, sample_input)
+def test1():
+    layer_sizes = [3, 3, 3, 3, 3, 1]
+    sample_input = torch.tensor([[1., 0., -1.]])
+    print('input shape:', sample_input.shape)
+    torch.manual_seed(123)
+    model1 = ExampleDeepNeuralNetwork(layer_sizes, use_shortcut=True)
+    print_gradients(model1, sample_input)
 
 
 print('\n----------------- connection attention and linear layers in a transformer block -----------------')
@@ -230,11 +231,12 @@ class TransformerBlock(nn.Module):
         x = x + shortcut
         return x
 
-torch.manual_seed(123)
-x = torch.rand(2, 4, 768)
-model = TransformerBlock(cfg=GPT_CONFIG_124M)
-out = model(x)
-print(f"Input shape: {x.shape}, output shape: {out.shape}")
+def test2():
+    torch.manual_seed(123)
+    x = torch.rand(2, 4, 768)
+    model = TransformerBlock(cfg=GPT_CONFIG_124M)
+    out = model(x)
+    print(f"Input shape: {x.shape}, output shape: {out.shape}")
 
 print('\n----------------- Code GPT model architecture -----------------')
 
@@ -264,35 +266,37 @@ class GPT2Model(nn.Module):
         logits = self.out_head(x)
         return logits
 
-torch.manual_seed(123)
-gpt_model = GPT2Model(cfg=GPT_CONFIG_124M)
+def test3():
+    torch.manual_seed(123)
+    gpt_model = GPT2Model(cfg=GPT_CONFIG_124M)
 
-# prepare batch input with real text
-# t1 = 'this is a cute'
-# t2 = 'hello file del ok'
-# tokenizer = tiktoken.encoding_for_model('gpt-4')
-# token_ids_1 = torch.tensor(tokenizer.encode(t1))
-# token_ids_2 = torch.tensor(tokenizer.encode(t2))
-# batch_data = torch.stack((token_ids_1, token_ids_2))
-print('input data shape', batch_data.shape)
-print('vocab size', tokenizer.n_vocab)
+    # prepare batch input with real text
+    # t1 = 'this is a cute'
+    # t2 = 'hello file del ok'
+    # tokenizer = tiktoken.encoding_for_model('gpt-4')
+    # token_ids_1 = torch.tensor(tokenizer.encode(t1))
+    # token_ids_2 = torch.tensor(tokenizer.encode(t2))
+    # batch_data = torch.stack((token_ids_1, token_ids_2))
+    print('input data shape', batch_data.shape)
+    print('vocab size', tokenizer.n_vocab)
 
-out = gpt_model(batch_data)
-print('gpt model output shape', out.shape)
+    out = gpt_model(batch_data)
+    print('gpt model output shape', out.shape)
 
-total_params = sum(p.numel() for p in gpt_model.parameters())
-print(f'total params: {total_params:,}')    # 239,840,256, note there is no weight sharing here
+    total_params = sum(p.numel() for p in gpt_model.parameters())
+    print(f'total params: {total_params:,}')    # 239,840,256, note there is no weight sharing here
 
-model_token_emb_weight = gpt_model.token_emb.weight
-print(model_token_emb_weight.shape)
-weight2 = gpt_model.out_head.weight
-print(weight2.shape)
+    model_token_emb_weight = gpt_model.token_emb.weight
+    print(model_token_emb_weight.shape)
+    weight2 = gpt_model.out_head.weight
+    print(weight2.shape)
 
-print('model size after sharing weight: ', total_params - weight2.shape[0] * weight2.shape[1])
+    print('model size after sharing weight: ', total_params - weight2.shape[0] * weight2.shape[1])
 
 
-print('\n----------------- Generate -----------------')
+print('\n----------------- Generate text -----------------')
 
+# inference
 def generate_text_simple(model, idx, max_new_tokens, context_size):
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -context_size :]
@@ -307,22 +311,42 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
 
     return idx
 
-start_context = 'Hello, I am'
-encoded = tokenizer.encode(start_context)
-print('encoded', encoded)
 
-encoded_tensor = torch.tensor(encoded).unsqueeze(0)
-print('encoded_tensor shape', encoded_tensor.shape)
+def generate_text_simple_gpt2(model, idx, max_new_tokens, context_size):
+    for _ in range(max_new_tokens):
+        idx_cond = idx[:, -context_size :]
 
-out = generate_text_simple(
-    model = gpt_model,
-    idx = encoded_tensor,
-    max_new_tokens = 6,
-    context_size = GPT_CONFIG_124M['context_length']
-)
+        with torch.no_grad():
+            logits = model(idx_cond)
 
-print('out', out)
+        logits = logits.logits
+        logits = logits[:, -1, :]
+        probas = torch.softmax(logits, dim=-1)
+        idx_next = torch.argmax(probas, dim=-1, keepdim=True)
+        idx = torch.cat((idx, idx_next), dim=1)
 
-l = (out.squeeze(0)).tolist()
-decoded = tokenizer.decode(l)
-print('decoded', decoded)
+    return idx
+
+def run_inference(model, start_context):
+    encoded = tokenizer.encode(start_context)
+    print('encoded', encoded)
+
+    encoded_tensor = torch.tensor(encoded).unsqueeze(0)
+    print('encoded_tensor shape', encoded_tensor.shape)
+
+    out = generate_text_simple(
+        model = model,
+        idx = encoded_tensor,
+        max_new_tokens = 6,
+        context_size = GPT_CONFIG_124M['context_length']
+    )
+
+    print('out', out)
+
+    l = (out.squeeze(0)).tolist()
+    decoded = tokenizer.decode(l)
+    print('decoded', decoded)
+
+if __name__ == '__main__':
+    start_context = 'Hello, I am'
+    # run_inference(gpt_model, batch_data)
