@@ -57,6 +57,7 @@ class DeepFM(nn.Module):
 
         # FM 2nd order interaction component
         self.fm = FactorizationMachine()
+        self.num_embeddings = nn.Parameter(torch.randn(num_numeric, emb_dim))
 
         # Deep component
             # note: it shares the emb layer with FM 2nd order component
@@ -70,7 +71,7 @@ class DeepFM(nn.Module):
         for hidden_dim in hidden_dims:
             layers.append(nn.Linear(input_dim, hidden_dim))
             layers.append(nn.ReLU())
-            layers.append(nn.Dropout(0.3))
+            layers.append(nn.Dropout(0.2))
             input_dim = hidden_dim
 
         layers.append(nn.Linear(input_dim, 1))
@@ -84,8 +85,10 @@ class DeepFM(nn.Module):
 
         cat_emb = [emb(x_categories[:, i]) for i, emb in enumerate(self.embeddings)]  #[(batch, emb_dim), (), ()]
         cat_emb = torch.stack(cat_emb, dim=1)  # convert 3 tensors in a list to one single tensor:  (batch, num_categorical, emb_dim)
-        num_emb = x_num.unsqueeze(2)     # convert tensor of shape (batch, num_numerical) to shape (batch, num_numerical, 1)
-        num_emb = num_emb.repeat(1, 1, self.emb_dim)   # make the last dimension shape same as cat_emb
+        # num_emb = x_num.unsqueeze(2)     # convert tensor of shape (batch, num_numerical) to shape (batch, num_numerical, 1)
+        # num_emb = num_emb.repeat(1, 1, self.emb_dim)   # make the last dimension shape same as cat_emb
+
+        num_emb = x_num.unsqueeze(2) * self.num_embeddings.unsqueeze(0) # Note: this is import to higher AUC
         x_emb = torch.cat([cat_emb, num_emb], dim=1)
         p_fm_2d = self.fm(x_emb)
 

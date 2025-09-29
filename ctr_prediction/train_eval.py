@@ -75,7 +75,7 @@ def train(model, train_loader, val_loader, optimizer, num_epochs, ohe=False):
     )
 
     print('-------- start training --------')
-    print(' -------- DeepFM --------')
+    print(' -------- DeepFM: emb_dim=64, hidden_dims=[256, 128, 64] --------')
     for epoch in range(num_epochs):
         total_loss = 0
         all_preds, all_labels = [], []
@@ -377,18 +377,70 @@ Epoch 1, train_loss: 33.3792, val_loss: 23.7683, train_auc: 0.6360, val_auc: 0.6
 Epoch 2, train_loss: 24.1684, val_loss: 20.3555, train_auc: 0.6500, val_auc: 0.6576, lr: 0.001000
 Epoch 3, train_loss: 20.8479, val_loss: 17.7893, train_auc: 0.6559, val_auc: 0.6591, lr: 0.001000
 
-○ V1: Epoch 14, train_loss: 2.3588, val_loss: 4.7761, train_auc: 0.7416, val_auc: 0.6510 (so low), lr: 0.001000
-    § Val auc is much lower than simple MLP. The reason is wide part use raw categorical id as feature (big int)
-○ V2: Remove categorical feature from wide component
-    § Epoch 3, train_loss: 0.4504, val_loss: 0.4772, train_auc: 0.8007, val_auc: 0.7659(recovered, but didn't improve too much), lr: 0.001000
-○ V3: Use same feature as deep component in wide layer
-    § Epoch 2, train_loss: 0.4644, val_loss: 0.4762, train_auc: 0.7836, val_auc: 0.7650 (wide doesn't learn anything from emb), lr: 0.001000
-○ V4: V2 + bias=True in wide layer
-    Epoch 3, train_loss: 0.4523, val_loss: 0.4741, train_auc: 0.7986, val_auc: 0.7670 (better), lr: 0.001000
-○ V5-1 (10k data): one-hot-encoding categorical features and use them in wide layer together with numerical features. 
-    Epoch 8, train_loss: 0.3875, val_loss: 0.4846, train_auc: 0.8603, val_auc: 0.7229 (better than V1, but worse than V2), lr: 0.001000
-  V5-2 (50k data): 
-    Epoch 3, train_loss: 0.4211, val_loss: 0.4688, train_auc: 0.8170, val_auc: 0.7422, lr: 0.001000
+data shape (1000000, 40)
+-------- start training --------
+ -------- DeepFM , dropout 0.3--------
+Epoch 0, train_loss: 103.4737, val_loss: 32.1828, train_auc: 0.5935, val_auc: 0.6408, lr: 0.001000
+Epoch 1, train_loss: 36.8029, val_loss: 23.8940, train_auc: 0.6386, val_auc: 0.6460, lr: 0.001000
+Epoch 2, train_loss: 27.1621, val_loss: 21.8542, train_auc: 0.6480, val_auc: 0.6626, lr: 0.001000
+Epoch 3, train_loss: 23.3605, val_loss: 18.9304, train_auc: 0.6528, val_auc: 0.6510, lr: 0.001000
+Epoch 4, train_loss: 20.4780, val_loss: 18.2109, train_auc: 0.6568, val_auc: 0.6538, lr: 0.001000
+Epoch 5, train_loss: 18.0456, val_loss: 17.5643, train_auc: 0.6615, val_auc: 0.6488, lr: 0.001000
+Epoch 6, train_loss: 16.7281, val_loss: 16.6549, train_auc: 0.6640, val_auc: 0.6497, lr: 0.001000
+Epoch 7, train_loss: 15.3092, val_loss: 16.6400, train_auc: 0.6676, val_auc: 0.6488, lr: 0.001000
+Epoch 8, train_loss: 14.2625, val_loss: 16.7372, train_auc: 0.6714, val_auc: 0.6521, lr: 0.001000
+Epoch 9, train_loss: 13.2841, val_loss: 16.8253, train_auc: 0.6733, val_auc: 0.6479, lr: 0.001000
+Early stopping
+
+
+data shape (1000000, 40)
+-------- start training --------
+ -------- DeepFM, Numeric embeddings: Replaces repeated scalars → richer interactions in FM (emb_dim=32, hidden_dims=[128, 64, 32]) --------
+Epoch 0, train_loss: 24.5372, val_loss: 14.3797, train_auc: 0.6089, val_auc: 0.6429, lr: 0.001000
+Epoch 1, train_loss: 10.9941, val_loss: 8.3212, train_auc: 0.6563, val_auc: 0.6585, lr: 0.001000
+Epoch 2, train_loss: 6.4914, val_loss: 5.3394, train_auc: 0.6753, val_auc: 0.6665, lr: 0.001000
+Epoch 3, train_loss: 4.1441, val_loss: 3.5520, train_auc: 0.6888, val_auc: 0.6716, lr: 0.001000
+Epoch 4, train_loss: 2.7588, val_loss: 2.5101, train_auc: 0.6988, val_auc: 0.6757, lr: 0.001000
+Epoch 5, train_loss: 1.9010, val_loss: 1.7478, train_auc: 0.7076, val_auc: 0.6858, lr: 0.001000
+Epoch 6, train_loss: 1.3627, val_loss: 1.2862, train_auc: 0.7156, val_auc: 0.6879, lr: 0.001000
+Epoch 7, train_loss: 1.0264, val_loss: 0.9980, train_auc: 0.7231, val_auc: 0.6903, lr: 0.001000
+Epoch 8, train_loss: 0.8101, val_loss: 0.8247, train_auc: 0.7310, val_auc: 0.7014, lr: 0.001000
+Epoch 9, train_loss: 0.6875, val_loss: 0.7202, train_auc: 0.7384, val_auc: 0.7134, lr: 0.001000
+Epoch 10, train_loss: 0.6234, val_loss: 0.6747, train_auc: 0.7453, val_auc: 0.7135, lr: 0.001000
+Epoch 11, train_loss: 0.5727, val_loss: 0.6175, train_auc: 0.7524, val_auc: 0.7251, lr: 0.001000
+Epoch 12, train_loss: 0.5460, val_loss: 0.5863, train_auc: 0.7574, val_auc: 0.7290, lr: 0.001000
+Epoch 13, train_loss: 0.5399, val_loss: 0.5837, train_auc: 0.7604, val_auc: 0.7255, lr: 0.001000
+Epoch 14, train_loss: 0.5210, val_loss: 0.5613, train_auc: 0.7646, val_auc: 0.7340, lr: 0.001000
+Epoch 15, train_loss: 0.5122, val_loss: 0.5527, train_auc: 0.7668, val_auc: 0.7338, lr: 0.001000
+Epoch 16, train_loss: 0.5067, val_loss: 0.5465, train_auc: 0.7694, val_auc: 0.7435, lr: 0.001000
+Epoch 17, train_loss: 0.5049, val_loss: 0.5597, train_auc: 0.7712, val_auc: 0.7410, lr: 0.001000
+Epoch 18, train_loss: 0.4966, val_loss: 0.5336, train_auc: 0.7735, val_auc: 0.7444, lr: 0.001000
+Epoch 19, train_loss: 0.4951, val_loss: 0.6402, train_auc: 0.7742, val_auc: 0.7458, lr: 0.001000
+
+
+
+ MLP with embedding (1M data)
+	○ Epoch 4, train_loss: 0.4356, val_loss: 0.4833, train_auc: 0.8169, val_auc: 0.7616, lr: 0.001000
+		
+Wide & Deep (google, 2016)
+    ○ V1: Epoch 14, train_loss: 2.3588, val_loss: 4.7761, train_auc: 0.7416, val_auc: 0.6510 (so low), lr: 0.001000
+        § Val auc is much lower than simple MLP. The reason is wide part use raw categorical id as feature (big int)
+    ○ V2: Remove categorical feature from wide component
+        § Epoch 3, train_loss: 0.4504, val_loss: 0.4772, train_auc: 0.8007, val_auc: 0.7659(recovered, but didn't improve too much), lr: 0.001000
+    ○ V3: Use same feature as deep component in wide layer
+        § Epoch 2, train_loss: 0.4644, val_loss: 0.4762, train_auc: 0.7836, val_auc: 0.7650 (wide doesn't learn anything from emb), lr: 0.001000
+    ○ V4: V2 + bias=True in wide layer
+        Epoch 3, train_loss: 0.4523, val_loss: 0.4741, train_auc: 0.7986, val_auc: 0.7670 (better), lr: 0.001000
+    ○ V5-1 (10k data): one-hot-encoding categorical features and use them in wide layer together with numerical features. 
+        Epoch 8, train_loss: 0.3875, val_loss: 0.4846, train_auc: 0.8603, val_auc: 0.7229 (better than V1, but worse than V2), lr: 0.001000
+      V5-2 (50k data): 
+        Epoch 3, train_loss: 0.4211, val_loss: 0.4688, train_auc: 0.8170, val_auc: 0.7422, lr: 0.001000
+
+DeepFM (Huawei, 2017)
+    ○ DeepFM shares the same raw feature input and latent feature embeddings between its FM and DNN components.
+    ○ It eliminates the need for manual feature engineering 
+        Epoch 19, train_loss: 0.4951, val_loss: 0.6402, train_auc: 0.7742, val_auc: 0.7458, lr: 0.001000 (dataset: 1000000)
+        
 
 """
 
