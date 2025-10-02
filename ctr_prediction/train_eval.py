@@ -6,8 +6,9 @@ from sklearn.metrics import roc_auc_score
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchinfo import summary
 
-from model import MlpWithEmbedding, WideAndDeepV1, WideAndDeepV2, WideAndDeepV3, WideAndDeepV4, DeepFM
+from model import MlpWithEmbedding, WideAndDeepV1, WideAndDeepV2, WideAndDeepV3, WideAndDeepV4, DeepFM, DCN, DcnV2
 from utils import CriteoDataset, parse_criteo_csv, CriteoDatasetV2, CriteoDatasetOHE
 import torch.nn as nn
 
@@ -56,13 +57,12 @@ def safe_auc(y_true, y_pred):
         return float("nan")
 
 
-def train(model, train_loader, val_loader, optimizer, num_epochs, ohe=False):
+def train(model, train_loader, val_loader, optimizer, num_epochs, ohe=False, patience=5):
     model.train()
     train_loss = []
     val_loss = []
     best_val_loss = float('inf')
     counter = 0
-    patience = 2
     criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
 
     # dynamic lr
@@ -70,12 +70,12 @@ def train(model, train_loader, val_loader, optimizer, num_epochs, ohe=False):
         optimizer,
         mode='min',
         factor=0.5,   # decrease lr by 50%
-        patience=2,   # trigger lr adjustment if no loss decrease after x continuous epochs
+        patience=patience,   # trigger lr adjustment if no loss decrease after x continuous epochs
         # verbose=True
     )
 
     print('-------- start training --------')
-    print(' -------- DeepFM: emb_dim=64, hidden_dims=[256, 128, 64] --------')
+    print(' -------- DCN V2 --------')
     for epoch in range(num_epochs):
         total_loss = 0
         all_preds, all_labels = [], []
@@ -162,6 +162,12 @@ def train_demo():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-3)
     train(model, dataloader, dataloader, optimizer, num_epochs=5)
 
+
+def get_input_size(dataloader):
+    x_num, x_cat, y = next(iter(dataloader))
+    return [x_num.shape, x_cat.shape]
+
+
 if __name__ == '__main__':
     # train_demo()
     df, num_col, category_col = (parse_criteo_csv(
@@ -191,6 +197,10 @@ if __name__ == '__main__':
         print('train_df_ohe shape ', train_df_ohe.shape)
 
 
+    lr = 0.001
+    weight_decay = 5e-4
+    rank = 32
+    patience = 4
     if ohe:
         train_dataset = CriteoDatasetOHE(train_df_ohe, num_col, category_col, ohe_columns)
         test_dataset = CriteoDatasetOHE(val_df_ohe, num_col, category_col, ohe_columns, train_dataset.vocabs, train_dataset.scaler)
@@ -200,16 +210,18 @@ if __name__ == '__main__':
         # print('ohe_column_num:', ohe_column_num)
         model = WideAndDeepV4(len(num_col), [train_dataset.vocab_size[c] for c in category_col], len(ohe_columns))
         optimizer = torch.optim.Adam(model.parameters())
-        train(model, train_dataloader, test_dataloader, optimizer, num_epochs=20, ohe=ohe)
+        train(model, train_dataloader, test_dataloader, optimizer, num_epochs=20, ohe=ohe, patience=patience)
     else:
         train_dataset = CriteoDatasetV2(train_df, num_col, category_col)
         test_dataset = CriteoDatasetV2(val_df, num_col, category_col, train_dataset.vocabs, train_dataset.scaler)
         train_dataloader = DataLoader(train_dataset, batch_size=1024, shuffle=True, collate_fn=collate_fn)
         test_dataloader = DataLoader(test_dataset, batch_size=1024, shuffle=True, collate_fn=collate_fn)
         # model = MlpWithEmbedding(len(num_col), [train_dataset.vocab_size[c] for c in category_col])
-        model = DeepFM(len(num_col), [train_dataset.vocab_size[c] for c in category_col])
-        optimizer = torch.optim.Adam(model.parameters(), weight_decay=5e-4)
-        train(model, train_dataloader, test_dataloader, optimizer, num_epochs=20, ohe=ohe)
+        # model = DeepFM(len(num_col), [train_dataset.vocab_size[c] for c in category_col])
+        model = DcnV2(len(num_col), [train_dataset.vocab_size[c] for c in category_col], rank=rank)
+        summary(model, input_size=get_input_size(train_dataloader))
+        optimizer = torch.optim.Adam(model.parameters(), weight_decay=weight_decay, lr=lr)
+        train(model, train_dataloader, test_dataloader, optimizer, num_epochs=20, ohe=ohe, patience=patience)
 
-
+    print('Hyper parameters: \r', f"lr: {lr: .6f}", f"weight_decay: {weight_decay: .6f}", f"rank: {rank: d}", f"patience: {patience}")
 
