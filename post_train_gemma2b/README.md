@@ -3,7 +3,7 @@
 google/gemma-2b-it
 
 
-### Dataset1
+### Dataset
 * UltraFeedback dataset: general-purpose preference data; diverse topic
 https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/default/train_prefs?views%5B%5D=train_prefs
 * Size: 61K
@@ -18,6 +18,11 @@ https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/def
 
 Metrics: Win Rate (Battle-style comparison)
 
+### Perplexity 
+output: [perplexity_out](eval_out/perplexity_out) 
+
+script: [eval_perplexity.py](eval_perplexity.py)
+
 ## Alpaca-eval 
     python3 run_alpacaeval_local.py
 
@@ -26,7 +31,9 @@ Dataset:
 
 
 ## Human side by side eval
-    [human_eval.py](human_eval.py), manual_eval_candidates.json[manual_eval_candidates.json](manual_eval_candidates.json)
+output: [manual_eval_candidates.json](manual_eval_candidates.json)
+
+script: [human_eval.py](human_eval.py), 
 
 
 ## LM-Eval Harness (MMLU, TruthfulQA, etc.) 

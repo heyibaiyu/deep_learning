@@ -1,0 +1,27 @@
+--- Final Perplexity Results on DPO model ---
+evaluate on 100 samples:
+Total Valid Tokens Scored: 14695
+Mean Negative Log-Likelihood (NLL): 4.1385
+Mean Perplexity: 62.7057
+
+
+evaluate on 200 samples:
+Total Valid Tokens Scored: 21488
+Mean Negative Log-Likelihood (NLL): 4.8653
+Mean Perplexity: 129.7093
+
+
+
+--- Final Perplexity Results on base model (gemma 2b) ---
+evaluate on 100 samples:
+Total Valid Tokens Scored: 14695
+Mean Negative Log-Likelihood (NLL): 4.1263
+Mean Perplexity: 61.9478
+
+
+evaluate on 200 samples:
+--- Final Perplexity Results ---
+Total Valid Tokens Scored: 21488
+Mean Negative Log-Likelihood (NLL): 4.8497
+Mean Perplexity: 127.7068
+
