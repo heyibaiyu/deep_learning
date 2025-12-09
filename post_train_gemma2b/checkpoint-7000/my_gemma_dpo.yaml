@@ -1,0 +1,12 @@
+model_name: "gemma_dpo"
+model_type: "hf"        # HuggingFace model loader
+pretrained: "google/gemma-2b-it"    # base model
+revision: null
+tokenizer: "google/gemma-2b-it"
+trust_remote_code: true
+
+# extra args passed to transformers.from_pretrained + PEFT
+model_args:
+  lora_path: "/S/tmp/jing/gemma2b/checkpoints/dpo-gemma2b_4/checkpoint-7000"
+  torch_dtype: "auto"
+  device_map: "auto"

@@ -2,7 +2,7 @@ from datasets import load_dataset, Dataset
 
 
 def load_data_ultra_feedback() -> Dataset:
-    ds = load_dataset("HuggingFaceH4/ultrafeedback_binarized",split='train_prefs')
+    ds = load_dataset("HuggingFaceH4/ultrafeedback_binarized",split='train_prefs',cache_dir="S:/tmp/jing/gemma2b/hf_cache")
     print(ds)
     prompts = []
     for row in ds:

@@ -1,0 +1,1 @@
+lm-eval --model hf --model_args "pretrained=google/gemma-2b-it,tokenizer=google/gemma-2b-it,peft=S:\\tmp\\jing\\gemma2b\\checkpoints\\dpo-gemma2b_4\\checkpoint-7000,device_map=cuda" --tasks hellaswag,truthfulqa,mmlu --batch_size 8 --device cuda

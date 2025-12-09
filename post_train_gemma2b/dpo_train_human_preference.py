@@ -14,10 +14,16 @@ import torch
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import DPOTrainer, DPOConfig
-from datasets import load_from_disk, Dataset, load_dataset
+import sys
+from data_util import load_data_ultra_feedback
 
 from huggingface_hub import login
 login(new_session=False)
+
+
+logfile = open("train.log", "w")
+sys.stdout = logfile
+sys.stderr = logfile
 
 """# Get base model"""
 
@@ -28,13 +34,9 @@ def get_model():
   model_name = 'google/gemma-2b-it'
   bnb_config = BitsAndBytesConfig(load_in_4bit=True,
                                   bnb_4bit_quant_type='nf4',
-                                  bnb_4bit_compute_dtype=torch.float16,
-                                  llm_int8_enable_fp32_cpu_offload=True)
+                                  bnb_4bit_compute_dtype=torch.float16)
   print(f'loading pretrained model on {device}')
   model = AutoModelForCausalLM.from_pretrained(model_name,
-                                               quantization_config=bnb_config,
-                                               device_map="auto")
-  ref_model = AutoModelForCausalLM.from_pretrained(model_name,
                                                quantization_config=bnb_config,
                                                device_map="auto")
   print('loading tokenizer')
@@ -46,65 +48,50 @@ def get_model():
       r=16, # lower r to reduce memory
       lora_alpha=32,
       lora_dropout=0.05,
-      # target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'],
-      target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj'],
+      target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'],
+ #      target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj'],
       bias='none',
       task_type='CAUSAL_LM')
 
   print('get peft model')
+  # model.enable_input_require_grads()    
   model = get_peft_model(model, peft_config)
   model.gradient_checkpointing_enable()  # enable checkpointing to reduce memory cost
   model.config.use_cache = False  # disable KV cache to save memory
+  print('model.get_input_embeddings().weight.requires_grad: ',model.get_input_embeddings().weight.requires_grad )
   model.print_trainable_parameters()
 
-  print('ref model parameters')
-  ref_model = get_peft_model(ref_model, peft_config)
-  ref_model.requires_grad_(False)
-  ref_model.eval()
-  ref_model.config.use_cache = False # disable KV cache to save memory
-  ref_model.print_trainable_parameters()
-  return model, ref_model, tokenizer
+  return model,  tokenizer
 
 
 """# Prepare post training data"""
 
-def load_data_ultra_feedback() -> Dataset:
-    ds = load_dataset("HuggingFaceH4/ultrafeedback_binarized",split='train_prefs')
-    print(ds)
-    prompts = []
-    for row in ds:
-        prompt = row['prompt']
-        chosen = row['chosen'][1]['content']
-        rejected = row['rejected'][1]['content']
-        prompts.append({'prompt': prompt, 'chosen': chosen, 'rejected': rejected})
-    return Dataset.from_list(prompts)
-
-model, ref_model, tokenizer = get_model()
+model,  tokenizer = get_model()
 dataset = load_data_ultra_feedback()
 
 """# Train model"""
 
 training_args = DPOConfig(
-    output_dir="checkpoints/dpo-gemma2b",
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=2,
-    learning_rate=1e-5,
+    output_dir="checkpoints/dpo-gemma2b_4",
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=4,
+    learning_rate=2e-6,
     lr_scheduler_type="cosine",
-    warmup_steps=100,
-    logging_steps=10,
-    save_steps=200,
-    max_steps=2000,
+    warmup_steps=500,
+    logging_steps=100,
+    save_steps=1000,
+    max_steps=7000,
     beta=0.1,       # Important: strength of preference alignment
-    max_length=1024,
-    max_prompt_length=512
+    max_length=512,
+    max_prompt_length=256
 )
 
 trainer = DPOTrainer(
     model=model,
-    ref_model=ref_model,
+    ref_model=None,
     args=training_args,
     train_dataset=dataset
 )
 
 trainer.train()
-
+logfile.close()
