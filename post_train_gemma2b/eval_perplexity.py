@@ -9,7 +9,7 @@ import math
 MODEL_ID = "google/gemma-2b-it"
 ADAPTER_PATH = "checkpoints/checkpoint-7000"
 MAX_LENGTH = 512
-SAMPLE_SIZE = 50
+SAMPLE_SIZE = 100
 BATCH_SIZE = 4 # Use a small batch size for memory efficiency
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

@@ -17,6 +17,9 @@ https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/def
 ### DPO Evaluation on human preference
 
 Metrics: Win Rate (Battle-style comparison)
+script: [eval_win_rate.py](eval_win_rate.py)
+
+![img_1.png](img_1.png)
 
 ### Perplexity 
 output: [perplexity_out](eval_out/perplexity_out) 
