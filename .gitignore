@@ -1,11 +1,37 @@
-/build-llm-from-scratch/.idea
-/flowers_recognition/.idea
-/flowers_recognition/__pycache__
-build-llm-from-scratch/.DS_Store
-build-llm-from-scratch/the-verdict.txt
-flowers_recognition/.DS_Store
-flowers_recognition/log/.DS_Store
-build-llm-from-scratch/__pycache__/utils.cpython-310.pyc
-build-llm-from-scratch/__pycache__/ch2_text_sampling_with_sliding_window.cpython-310.pyc
+# OS
 .DS_Store
-build-llm-from-scratch/__pycache__/ch3_attention.cpython-310.pyc
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.idea/
+.vscode/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Data archives
+*.zip
+*.tar.gz
+
+# Large training data
+ctr_prediction/dac/
+
+# Model checkpoints & weights
+*.pt
+*.pth
+*.safetensors
+*.bin
+checkpoint-*/
+
+# Logs (keep structured log files, ignore raw train logs)
+train.log
+
+# Misc
+build-llm-from-scratch/the-verdict.txt

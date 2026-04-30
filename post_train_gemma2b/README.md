@@ -16,8 +16,25 @@ https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/def
 
 ### DPO Evaluation on human preference
 
-Metrics: Win Rate (Battle-style comparison)
-script: [eval_win_rate.py](eval_win_rate.py)
+Metrics: Win Rate + Reward Margin on held-out preference pairs (`test_prefs`)
+
+Script: [eval_win_rate.py](eval_win_rate.py)
+
+Run:
+```bash
+python3 eval_win_rate.py \
+  --adapter-path checkpoints/checkpoint-7000 \
+  --base-model google/gemma-2b-it \
+  --batch-size 4 \
+  --max-length 1024 \
+  --output-json eval_out/dpo_winrate.json
+```
+
+The script prints JSON metrics:
+* `win_rate`: fraction where DPO reward(chosen) > DPO reward(rejected)
+* `avg_margin`: mean reward(chosen) - reward(rejected)
+* `avg_reward_chosen` / `avg_reward_rejected`
+* `evaluated_examples` / `skipped_examples`
 
 ![img_1.png](img_1.png)
 

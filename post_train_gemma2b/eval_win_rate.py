@@ -1,29 +1,26 @@
 # evaluate the DPO model win-rate on test set
 # compare the reward score of chosen and rejected response
 
+import argparse
+from datetime import datetime
+
 import torch
 from peft import AutoPeftModelForCausalLM
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from torch.nn.functional import log_softmax
-from data_util import load_data_ultra_feedback
-from datetime import datetime
 
-start = datetime.now()
-print(start)
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print('using device:', device)
+from data_util import load_data_ultra_feedback
 
 
 def build_labels_left_padding(input_ids, attention_mask, prompt_lens):
     labels = input_ids.clone()
-    B, T = input_ids.shape
+    bsz, seq_total_len = input_ids.shape
 
     # 1. mask padding
     labels[attention_mask == 0] = -100
 
-    for i in range(B):
+    for i in range(bsz):
         seq_len = attention_mask[i].sum().item()
-        pad_len = T - seq_len
+        pad_len = seq_total_len - seq_len
 
         prompt_start = pad_len
         prompt_end = pad_len + prompt_lens[i]
@@ -35,10 +32,7 @@ def build_labels_left_padding(input_ids, attention_mask, prompt_lens):
 
 
 def seq_logprob(model, input_ids, labels):
-    """
-    Length-normalized log-prob over response tokens only.
-    Safe for CUDA.
-    """
+    """Length-normalized log-prob over response tokens only."""
     with torch.no_grad():
         logits = model(input_ids).logits
 
@@ -59,7 +53,9 @@ def seq_logprob(model, input_ids, labels):
 
     token_logp = token_logp * mask
 
-    return token_logp.sum(dim=1) / mask.sum(dim=1)
+    # avoid divide-by-zero when an example has no response tokens after truncation
+    denom = mask.sum(dim=1).clamp(min=1)
+    return token_logp.sum(dim=1) / denom
 
 
 def evaluate_dpo_winrate_batched(
@@ -69,7 +65,7 @@ def evaluate_dpo_winrate_batched(
     dataset,
     batch_size=8,
     beta=0.1,
-    device="cuda"
+    device="cuda",
 ):
     model.eval()
     ref_model.eval()
@@ -89,7 +85,7 @@ def evaluate_dpo_winrate_batched(
             prompts,
             return_tensors="pt",
             padding=True,
-            truncation=True
+            truncation=True,
         ).to(device)
 
         prompt_lens = enc_prompt["attention_mask"].sum(dim=1)
@@ -100,7 +96,7 @@ def evaluate_dpo_winrate_batched(
             chosen,
             return_tensors="pt",
             padding=True,
-            truncation=True
+            truncation=True,
         ).to(device)
 
         enc_rejected = tokenizer(
@@ -108,19 +104,19 @@ def evaluate_dpo_winrate_batched(
             rejected,
             return_tensors="pt",
             padding=True,
-            truncation=True
+            truncation=True,
         ).to(device)
 
         # --- build masked labels
         labels_chosen = build_labels_left_padding(
             enc_chosen["input_ids"],
             enc_chosen["attention_mask"],
-            prompt_lens
+            prompt_lens,
         ).to(device)
         labels_rejected = build_labels_left_padding(
             enc_rejected["input_ids"],
             enc_rejected["attention_mask"],
-            prompt_lens
+            prompt_lens,
         ).to(device)
 
         # --- policy model log-probs
@@ -136,7 +132,7 @@ def evaluate_dpo_winrate_batched(
         reward_r = beta * (logp_r - ref_logp_r)
 
         margin = reward_c - reward_r
-        print('index: ', start, 'margin:', margin)
+        print("index:", start, "margin:", margin)
 
         wins.append((margin > 0).float())
         margins.append(margin)
@@ -147,47 +143,84 @@ def evaluate_dpo_winrate_batched(
     return win_rate, avg_margin
 
 
-def load_model(dpo_model_root, dpo_model_name):
-    print('loading model...')
+def load_model(base_model_name, adapter_ckpt, dtype, device_map):
+    print("loading model...")
     base_model = AutoModelForCausalLM.from_pretrained(
-        "google/gemma-2b-it", dtype=torch.float16, device_map="auto")
-    adapter_ckpt = dpo_model_root + dpo_model_name
-    dpo_model = AutoPeftModelForCausalLM.from_pretrained(adapter_ckpt, dtype=torch.float16, device_map='auto')
-    tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b-it", padding_side="left", max_length=1024)
-    print('model loaded')
+        base_model_name,
+        torch_dtype=dtype,
+        device_map=device_map,
+    )
+    dpo_model = AutoPeftModelForCausalLM.from_pretrained(
+        adapter_ckpt,
+        torch_dtype=dtype,
+        device_map=device_map,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name, padding_side="left", max_length=1024)
+    print("model loaded")
     return base_model, dpo_model, tokenizer
 
 
-def load_data():
-    return load_data_ultra_feedback('test')
+def parse_args():
+    parser = argparse.ArgumentParser(description="Evaluate DPO win-rate on UltraFeedback test split")
+    parser.add_argument("--adapter-path", required=True, help="Path to PEFT adapter checkpoint")
+    parser.add_argument("--base-model", default="google/gemma-2b-it")
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--beta", type=float, default=0.1)
+    parser.add_argument("--split", default="test", choices=["train", "test"])
+    parser.add_argument("--max-examples", type=int, default=None)
+    parser.add_argument("--device", default=("cuda" if torch.cuda.is_available() else "cpu"))
+    parser.add_argument("--device-map", default="auto")
+    parser.add_argument("--dtype", default="float16", choices=["float16", "bfloat16", "float32"])
+    return parser.parse_args()
 
 
-data = load_data()
-# dpo_model_root = "/home/au/jing/gemma2b/checkpoints/"
-# dpo_model_name = 'checkpoint-7000'
-dpo_model_root = "/home/au/jing/gemma2b/gemma2b_1/dpo-gemma2b_4/"
-dpo_model_name = 'checkpoint-4=6000'
+def main():
+    args = parse_args()
 
-ref_model, dpo_model, tokenizer = load_model(dpo_model_root, dpo_model_name)
+    start = datetime.now()
+    print(start)
+    print("using device:", args.device)
 
-win_rate, margin = evaluate_dpo_winrate_batched(
-    model=dpo_model,
-    ref_model=ref_model,
-    tokenizer=tokenizer,
-    dataset=data,
-    batch_size=4,   # tune for GPU memory
-    beta=0.1,
-    device=device
-)
+    data = load_data_ultra_feedback(args.split)
+    if args.max_examples is not None:
+        data = data.select(range(min(args.max_examples, len(data))))
 
-print('model name: ', dpo_model_name)
-print("DPO win rate:", win_rate)
-print("Reward margin:", margin)
+    dtype_map = {
+        "float16": torch.float16,
+        "bfloat16": torch.bfloat16,
+        "float32": torch.float32,
+    }
+    dtype = dtype_map[args.dtype]
 
-end = datetime.now()
-print(end)
+    ref_model, dpo_model, tokenizer = load_model(
+        base_model_name=args.base_model,
+        adapter_ckpt=args.adapter_path,
+        dtype=dtype,
+        device_map=args.device_map,
+    )
 
-duration = end - start
-print('duration', duration)
-print('total minutes', duration.total_seconds() / 60)
-print('total seconds', duration.total_seconds())
+    win_rate, margin = evaluate_dpo_winrate_batched(
+        model=dpo_model,
+        ref_model=ref_model,
+        tokenizer=tokenizer,
+        dataset=data,
+        batch_size=args.batch_size,
+        beta=args.beta,
+        device=args.device,
+    )
+
+    print("adapter path:", args.adapter_path)
+    print("DPO win rate:", win_rate)
+    print("Reward margin:", margin)
+
+    end = datetime.now()
+    print(end)
+
+    duration = end - start
+    print("duration", duration)
+    print("total minutes", duration.total_seconds() / 60)
+    print("total seconds", duration.total_seconds())
+
+
+if __name__ == "__main__":
+    main()
