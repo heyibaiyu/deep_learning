@@ -1,4 +1,4 @@
-## Post training of model google/gemma-2b-it
+## Implemented DPO-style post-training on Gemma-2B
 ### Base Model
 google/gemma-2b-it
 
