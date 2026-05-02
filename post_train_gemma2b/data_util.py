@@ -15,6 +15,33 @@ def load_data_ultra_feedback(flag='train') -> Dataset:
     print(prompts[0].keys())
     return Dataset.from_list(prompts)
 
+def analyze_response_lengths(dataset: Dataset, dataset_name: str):
+    chosen_lengths = [len(item['chosen'].split()) for item in dataset]
+    rejected_lengths = [len(item['rejected'].split()) for item in dataset]
+
+    avg_chosen_length = sum(chosen_lengths) / len(chosen_lengths)
+    avg_rejected_length = sum(rejected_lengths) / len(rejected_lengths)
+
+    print(f"\n--- {dataset_name} Dataset Response Length Analysis ---")
+    print(f"Average chosen response length: {avg_chosen_length:.2f} words")
+    print(f"Average rejected response length: {avg_rejected_length:.2f} words")
+
+    if avg_chosen_length > avg_rejected_length:
+        print(f"Chosen responses are, on average, {avg_chosen_length - avg_rejected_length:.2f} words longer than rejected responses.")
+    elif avg_rejected_length > avg_chosen_length:
+        print(f"Rejected responses are, on average, {avg_rejected_length - avg_chosen_length:.2f} words longer than chosen responses.")
+    else:
+        print("Average chosen and rejected response lengths are equal.")
+
+# Load and analyze training data
+train_dataset = load_data_ultra_feedback('train')
+analyze_response_lengths(train_dataset, 'Training')
+
+# Load and analyze test data
+test_dataset = load_data_ultra_feedback('test')
+analyze_response_lengths(test_dataset, 'Test')
+
+
 # train = load_data_ultra_feedback()
 # print('data example', train[0])
 # print('test data shape', train.shape)
