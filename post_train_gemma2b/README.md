@@ -33,7 +33,7 @@ This project implements a compact post-training workflow on Gemma-2B using Ultra
 ### DPO training result
 [dpo_train_human_preference.py](dpo_train_human_preference.py)
 
-![img_2.png](img_2.png)
+![img_2.png](assets/img_2.png)
 
 ### DPO Evaluation on human preference
 
@@ -48,7 +48,7 @@ python3 eval_win_rate.py \
   --base-model google/gemma-2b-it \
   --batch-size 4 \
   --max-length 1024 \
-  --output-json eval_out/dpo_winrate.json
+  --output-json data/dpo_winrate.json
 ```
 
 The script prints JSON metrics:
@@ -57,10 +57,10 @@ The script prints JSON metrics:
 * `avg_reward_chosen` / `avg_reward_rejected`
 * `evaluated_examples` / `skipped_examples`
 
-![img_1.png](img_1.png)
+![img_1.png](assets/img_1.png)
 
 ### Perplexity 
-output: [perplexity_out](eval_out/perplexity_out) 
+output: [perplexity_out](data/perplexity_out) 
 
 script: [eval_perplexity.py](eval_perplexity.py)
 
@@ -72,7 +72,7 @@ Dataset:
 
 
 ## Human side by side eval
-output: [manual_eval_candidates.json](manual_eval_candidates.json)
+output: [manual_eval_candidates.json](data/manual_eval_candidates.json)
 
 script: [human_eval.py](human_eval.py), 
 

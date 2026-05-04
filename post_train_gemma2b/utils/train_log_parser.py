@@ -49,7 +49,7 @@ def read_log_file(file_path):
      with open(file_path, 'r') as f:
          return f.read()
 
-log_content = read_log_file("train.log")
+log_content = read_log_file("../data/train.log")
 
 # 2. Get the lists
 extracted_losses, extracted_margins = parse_training_log(log_content)

@@ -3,59 +3,18 @@
 
 import argparse
 from datetime import datetime
+import os # Import os for TOKENIZERS_PARALLELISM
+import collections # Import collections
 
 import torch
-from peft import AutoPeftModelForCausalLM
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer # Keep AutoTokenizer for direct use in evaluate_dpo_winrate_batched
 
-from data_util import load_data_ultra_feedback
-
-
-def build_labels_left_padding(input_ids, attention_mask, prompt_lens):
-    labels = input_ids.clone()
-    bsz, seq_total_len = input_ids.shape
-
-    # 1. mask padding
-    labels[attention_mask == 0] = -100
-
-    for i in range(bsz):
-        seq_len = attention_mask[i].sum().item()
-        pad_len = seq_total_len - seq_len
-
-        prompt_start = pad_len
-        prompt_end = pad_len + prompt_lens[i]
-
-        # 2. mask prompt tokens
-        labels[i, prompt_start:prompt_end] = -100
-
-    return labels
+from utils.data_utils import load_data_ultra_feedback # Updated import path
+from utils.model_utils import load_dpo_models_and_tokenizer_for_evaluation # Updated import path
+from utils.eval_utils import build_labels_left_padding, seq_logprob # Updated import path
 
 
-def seq_logprob(model, input_ids, labels):
-    """Length-normalized log-prob over response tokens only."""
-    with torch.no_grad():
-        logits = model(input_ids).logits
-
-    logp = torch.log_softmax(logits[:, :-1], dim=-1)
-    labels = labels[:, 1:]
-
-    # mask prompt tokens
-    mask = labels != -100
-
-    # replace -100 with a safe index (e.g., 0)
-    safe_labels = labels.clone()
-    safe_labels[~mask] = 0
-
-    token_logp = logp.gather(
-        dim=-1,
-        index=safe_labels.unsqueeze(-1)
-    ).squeeze(-1)
-
-    token_logp = token_logp * mask
-
-    # avoid divide-by-zero when an example has no response tokens after truncation
-    denom = mask.sum(dim=1).clamp(min=1)
-    return token_logp.sum(dim=1) / denom
+os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable tokenizer parallelism globally for this script
 
 
 def evaluate_dpo_winrate_batched(
@@ -70,8 +29,8 @@ def evaluate_dpo_winrate_batched(
     model.eval()
     ref_model.eval()
 
-    wins = []
-    margins = []
+    all_wins = []
+    all_margins = []
 
     for start in range(0, len(dataset), batch_size):
         batch = dataset[start:start + batch_size]
@@ -132,32 +91,15 @@ def evaluate_dpo_winrate_batched(
         reward_r = beta * (logp_r - ref_logp_r)
 
         margin = reward_c - reward_r
-        print("index:", start, "margin:", margin)
+        # print("index:", start, "margin:", margin) # Comment out for cleaner output
 
-        wins.append((margin > 0).float())
-        margins.append(margin)
+        all_wins.append((margin > 0).float())
+        all_margins.append(margin)
 
-    win_rate = torch.cat(wins).mean().item()
-    avg_margin = torch.cat(margins).mean().item()
+    overall_win_rate = torch.cat(all_wins).mean().item()
+    overall_avg_margin = torch.cat(all_margins).mean().item()
 
-    return win_rate, avg_margin
-
-
-def load_model(base_model_name, adapter_ckpt, dtype, device_map):
-    print("loading model...")
-    base_model = AutoModelForCausalLM.from_pretrained(
-        base_model_name,
-        torch_dtype=dtype,
-        device_map=device_map,
-    )
-    dpo_model = AutoPeftModelForCausalLM.from_pretrained(
-        adapter_ckpt,
-        torch_dtype=dtype,
-        device_map=device_map,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(base_model_name, padding_side="left", max_length=1024)
-    print("model loaded")
-    return base_model, dpo_model, tokenizer
+    return overall_win_rate, overall_avg_margin
 
 
 def parse_args():
@@ -192,14 +134,14 @@ def main():
     }
     dtype = dtype_map[args.dtype]
 
-    ref_model, dpo_model, tokenizer = load_model(
+    ref_model, dpo_model, tokenizer = load_dpo_models_and_tokenizer_for_evaluation(
         base_model_name=args.base_model,
         adapter_ckpt=args.adapter_path,
         dtype=dtype,
         device_map=args.device_map,
     )
 
-    win_rate, margin = evaluate_dpo_winrate_batched(
+    overall_win_rate, overall_avg_margin = evaluate_dpo_winrate_batched(
         model=dpo_model,
         ref_model=ref_model,
         tokenizer=tokenizer,
@@ -209,9 +151,10 @@ def main():
         device=args.device,
     )
 
+    print("\n--- Overall Evaluation Results ---")
     print("adapter path:", args.adapter_path)
-    print("DPO win rate:", win_rate)
-    print("Reward margin:", margin)
+    print("DPO win rate:", overall_win_rate)
+    print("Reward margin:", overall_avg_margin)
 
     end = datetime.now()
     print(end)
