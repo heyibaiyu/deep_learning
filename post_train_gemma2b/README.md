@@ -1,13 +1,34 @@
-## Implemented DPO-style post-training on Gemma-2B
-### Base Model
-google/gemma-2b-it
+# PreferenceLab: DPO Post-Training Gemma-2B
 
+## TL;DR
+Fine-tuned Gemma-2B-IT with DPO on UltraFeedback preference data.
+Compared base vs DPO checkpoints using reward-margin win rate, AlpacaEval, LM-Eval Harness, perplexity, and manual side-by-side evaluation.
 
-### Dataset
-* UltraFeedback dataset: general-purpose preference data; diverse topic
-https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/default/train_prefs?views%5B%5D=train_prefs
-* Size: 61K
-* Goal: human preference
+## Why this project
+Modern LLM post-training is fundamentally about improving model behavior after pretraining or instruction tuning. Preference optimization methods such as DPO provide a practical way to align a model with human judgments by converting each prompt into a pairwise ranking problem: the preferred response should become more likely under the policy than the rejected response, while staying close to the reference model.
+
+This project implements a compact post-training workflow on Gemma-2B using UltraFeedback preference data, LoRA-based DPO training, implicit reward-margin evaluation, benchmark evaluation, and qualitative failure analysis. The goal is not just to fine-tune a model, but to study how preference optimization changes response quality, reward margins, benchmark performance, and failure modes.
+
+## Model and data
+- Base policy: google/gemma-2b-it
+- Preference data: UltraFeedback binarized
+    * UltraFeedback dataset: general-purpose preference data; diverse topic
+    https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized/viewer/default/train_prefs?views%5B%5D=train_prefs
+    * Goal: human preference
+- Train: 61,135 examples
+- Test: 2,000 examples
+- Training method: LoRA + 4-bit quantization
+
+## Training setup
+- LoRA rank: 16
+- beta: 0.1
+- max steps: 7,000
+- batch size: 2
+- grad accumulation: 4
+- max length: 512
+- GPU: ___
+- training time: ___
+
 
 ### DPO training result
 [dpo_train_human_preference.py](dpo_train_human_preference.py)
@@ -147,3 +168,25 @@ This evaluates objective quality, but not human preference.
 | - other          |      2|none  |      |acc   |↑  |0.4287|±  |0.0088|
 | - social sciences|      2|none  |      |acc   |↑  |0.4274|±  |0.0088|
 | - stem           |      2|none  |      |acc   |↑  |0.3298|±  |0.0082|
+
+
+## Analysis
+- Length bias
+  ### Length imbalance in preference data
+
+Before interpreting DPO win rate, I checked whether the preference dataset has a length bias. This matters because preference datasets often favor longer, more detailed answers, and DPO may learn to prefer verbosity if response length is correlated with the `chosen` label.
+
+| Split | Avg chosen length | Avg rejected length | Avg difference | Relative difference |
+|---|---:|---:|---:|---:|
+| Train | 198.34 words | 175.48 words | +22.86 words | +13.0% |
+| Test | 204.65 words | 176.91 words | +27.74 words | +15.7% |
+
+Both splits show that `chosen` responses are longer than `rejected` responses on average. In the training set, chosen responses are **22.86 words longer** than rejected responses, a relative increase of approximately **13.0%**. In the held-out test set, chosen responses are **27.74 words longer**, a relative increase of approximately **15.7%**.
+
+This suggests that the preference labels are partially correlated with response length. Therefore, raw DPO win rate should not be interpreted as a pure measure of response quality. Some improvement may come from learning stylistic or verbosity patterns associated with preferred responses.
+
+To reduce this confounder, I report DPO win rate on the held-out test set and further bucket examples by chosen/rejected length difference. This helps separate genuine preference-quality improvements from gains that may be driven by longer responses.
+
+- Failure cases
+- Limitations
+
