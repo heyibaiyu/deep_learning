@@ -1,4 +1,5 @@
 from datasets import load_dataset, Dataset
+import numpy as np # Import numpy for statistical calculations
 
 
 def load_data_ultra_feedback(flag='train') -> Dataset:
@@ -7,11 +8,18 @@ def load_data_ultra_feedback(flag='train') -> Dataset:
     else:
         ds = load_dataset("HuggingFaceH4/ultrafeedback_binarized",split='test_prefs',cache_dir="S:/tmp/jing/gemma2b/hf_cache_test")
     prompts = []
+    empty_response = 0
     for row in ds:
         prompt = row['prompt']
         chosen = row['chosen'][1]['content']
         rejected = row['rejected'][1]['content']
-        prompts.append({'prompt': prompt, 'chosen': chosen, 'rejected': rejected})
+        # Add a check to skip if either chosen or rejected is empty
+        if chosen and rejected: # This checks if the strings are not empty
+            prompts.append({'prompt': prompt, 'chosen': chosen, 'rejected': rejected})
+        else:
+            # print(f"Skipping example due to empty chosen or rejected response. Prompt: {prompt[:50]}...")
+            empty_response += 1
+    print(f'Removed {empty_response} empty responses')
     print(prompts[0].keys())
     return Dataset.from_list(prompts)
 
@@ -33,13 +41,64 @@ def analyze_response_lengths(dataset: Dataset, dataset_name: str):
     else:
         print("Average chosen and rejected response lengths are equal.")
 
+def analyze_length_ratios(dataset: Dataset, dataset_name: str):
+    ratios = []
+    for item in dataset:
+        len_chosen = len(item['chosen'].split())
+        len_rejected = len(item['rejected'].split())
+        if len_rejected > 0:
+            ratios.append(len_chosen / len_rejected)
+
+        else:
+            # Handle cases where rejected response is empty
+            ratios.append(float('inf') if len_chosen > 0 else 1.0) # If chosen is also empty, ratio is 1.0
+
+    ratios = np.array(ratios)
+
+    print(f"\n--- {dataset_name} Dataset Length Ratio (Chosen/Rejected) Analysis ---")
+    print(f"Min ratio: {np.min(ratios):.2f}")
+    print(f"Max ratio: {np.max(ratios):.2f}")
+    print(f"Mean ratio: {np.mean(ratios):.2f}")
+    print(f"Median ratio: {np.median(ratios):.2f}")
+    print(f"25th percentile ratio: {np.percentile(ratios, 25):.2f}")
+    print(f"75th percentile ratio: {np.percentile(ratios, 75):.2f}")
+    print(f"90th percentile ratio: {np.percentile(ratios, 90):.2f}")
+    # print(f"Number of infinite ratios (rejected response was empty): {np.isinf(ratios).sum()}")
+
+def analyze_length_comparison_distribution(dataset: Dataset, dataset_name: str):
+    chosen_longer = 0
+    rejected_longer = 0
+    equal_length = 0
+    total_examples = len(dataset)
+
+    for item in dataset:
+        len_chosen = len(item['chosen'].split())
+        len_rejected = len(item['rejected'].split())
+
+        if len_chosen > len_rejected:
+            chosen_longer += 1
+        elif len_rejected > len_chosen:
+            rejected_longer += 1
+        else:
+            equal_length += 1
+
+    print(f"\n--- {dataset_name} Dataset Length Comparison Distribution (Chosen vs Rejected) ---")
+    print(f"Chosen is longer: {chosen_longer} ({chosen_longer / total_examples:.2%})")
+    print(f"Rejected is longer: {rejected_longer} ({rejected_longer / total_examples:.2%})")
+    print(f"Lengths are equal: {equal_length} ({equal_length / total_examples:.2%})")
+
+
 # Load and analyze training data
 train_dataset = load_data_ultra_feedback('train')
 analyze_response_lengths(train_dataset, 'Training')
+analyze_length_ratios(train_dataset, 'Training')
+analyze_length_comparison_distribution(train_dataset, 'Training')
 
 # Load and analyze test data
 test_dataset = load_data_ultra_feedback('test')
 analyze_response_lengths(test_dataset, 'Test')
+analyze_length_ratios(test_dataset, 'Test')
+analyze_length_comparison_distribution(test_dataset, 'Test')
 
 
 # train = load_data_ultra_feedback()

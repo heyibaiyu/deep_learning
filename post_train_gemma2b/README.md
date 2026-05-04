@@ -26,8 +26,8 @@ This project implements a compact post-training workflow on Gemma-2B using Ultra
 - batch size: 2
 - grad accumulation: 4
 - max length: 512
-- GPU: ___
-- training time: ___
+- GPU: RTX 3090
+- training time: 9h
 
 
 ### DPO training result
@@ -181,11 +181,15 @@ Before interpreting DPO win rate, I checked whether the preference dataset has a
 | Train | 198.34 words | 175.48 words | +22.86 words | +13.0% |
 | Test | 204.65 words | 176.91 words | +27.74 words | +15.7% |
 
+Chosen is longer: 1086 (54.38%)
+Rejected is longer: 872 (43.67%)
+Lengths are equal: 39 (1.95%)
+
 Both splits show that `chosen` responses are longer than `rejected` responses on average. In the training set, chosen responses are **22.86 words longer** than rejected responses, a relative increase of approximately **13.0%**. In the held-out test set, chosen responses are **27.74 words longer**, a relative increase of approximately **15.7%**.
 
-This suggests that the preference labels are partially correlated with response length. Therefore, raw DPO win rate should not be interpreted as a pure measure of response quality. Some improvement may come from learning stylistic or verbosity patterns associated with preferred responses.
+This suggests that the preference labels are partially correlated with response length. 
 
-To reduce this confounder, I report DPO win rate on the held-out test set and further bucket examples by chosen/rejected length difference. This helps separate genuine preference-quality improvements from gains that may be driven by longer responses.
+According to the ratio analysis when chosen is longer vs. rejected is longer, the distribution is actually good. The high percentage of cases where the shorter answer wins (44%) provides enough "negative length signal" to prevent the model from learning a simple "longer is better" heuristic.
 
 - Failure cases
 - Limitations
